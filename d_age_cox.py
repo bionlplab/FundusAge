@@ -390,7 +390,9 @@ def test_model(test_loader, model, name='empty',train_fold = 1):
     df.to_csv('fold_'+str(train_fold)+'_'+name+'.csv')
     return df
 def find_id(df2):
+    #df2 = df2[df2['ID'].str.contains('QUA')] in find_id()
     id_dict = {}
+    df2 = df2.sort_values("ID", ascending=True)
     id_list = df2['ID'].tolist()
     risk_list = df2['pred'].tolist()
     for x in range(len(id_list)):
@@ -401,9 +403,9 @@ def find_id(df2):
         else: lr = 'le'
         id = id+'_'+lr
         #if (now_id not in id_dict.keys()): continue
-        if (id in id_dict.keys()): continue
+        if (id in id_dict.keys() and 'QUA' not in now_id): continue
         else:   id_dict[id] = now_risk
-
+    print(id_dict)
     new_df = pd.DataFrame.from_dict(id_dict, orient='index', columns=['bio_age'])
     new_df.index.name = 'id'
     new_df = new_df.reset_index()
@@ -422,6 +424,10 @@ def find_id(df2):
     return merged
 def cox(train_df, test_df):
     cols = ['DRSZWI','INCPWI','RPEDWI','GEOAWI','DRSOFT','DRARWI']
+    # Areds1 : value 9-step: DRARWI,RPEDWI,GEOAWI,INCPWI
+    # 12-step: NDRF2,SSRF2,SUBFF2,SUBHF2,PHCOF2 (n-AMD)///GOACT,GOACS(GA)
+    # Areds2 : value: DARINGRD//ipingrid(INCPWI),dpingrid(RPEDWI),gapres,gamacctr,
+    #
     mask = (train_df[cols] < 8).all(axis=1)
     train_df = train_df[mask]
 
@@ -429,8 +435,17 @@ def cox(train_df, test_df):
     test_df = test_df[mask]
 
 
+    
+    cols = ['times']
+    mask = (train_df[cols]>=1).all(axis=1)
+    train_df = train_df[mask]
+
+    mask = (test_df[cols] >=1 ).all(axis=1)
+    test_df = test_df[mask]
+
+
     all_cols = [c for c in train_df.columns if c not in ("times", "status")]
-    exclude_cols = ["Unnamed: 0.1","Unnamed: 0", "g_id",'id', "label", "age", "biomarker","GEOACT",'GEOACS','SUBFF2','NDRUF2','SSRF2','SUBHF2','school','race',]
+    exclude_cols = ["Unnamed: 0.1","Unnamed: 0", "g_id",'id', "label", "age", "biomarker","GEOACT",'GEOACS','SUBFF2','NDRUF2','SSRF2','SUBHF2','school','race','gender']
     use_cols = [c for c in all_cols if c not in exclude_cols and '_' not in c]
     use_cols.append('bio_age')
     print(use_cols)
@@ -468,7 +483,7 @@ def cox(train_df, test_df):
 
     formula_str = " + ".join(significant_vars)
     print("Using formula:", formula_str)
-
+    train_df.to_csv('debug.csv')
 
     print(np.sum(test_df['status']==1))
 
