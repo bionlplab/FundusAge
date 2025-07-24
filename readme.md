@@ -70,6 +70,7 @@ After generating all 5 folds of test results, run `cox_test.py` to evaluate each
 - Use the `test_fold` variable at **line 280** of `cox_test.py` to specify which fold to evaluate:
   - `test_fold = 1` to `5`: evaluate individual folds
   - `test_fold = 0`: evaluate the **ensemble result** by combining predictions from all five folds
+  - see our **biological age results** and **data spilt** for **AREDS** in `./result_v3`
 
 ```python
 # Example (cox_test.py, line 280)
