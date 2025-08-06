@@ -38,8 +38,9 @@ table **must** contain the following columns:
 
 To generate biological age values:
 
-1. **Prepare Checkpoints**  
-   Place all model checkpoints in the `./result_p` directory.
+1. **Prepare Checkpoints**
+   - The five-fold trained models can be accessed via the following Google Drive [link](https://drive.google.com/drive/folders/1TaPMHPWmvKCJrQ9MzgXxj4ukN1mqvd1b?usp=drive_link)：
+   - Place all model checkpoints in the `./result_p` directory.
 
 2. **Run Prediction**  
    Execute the following command to get predictions for each fold (X = 1–5):
@@ -48,8 +49,8 @@ To generate biological age values:
    python d_age_cox.py --train_fold X
    ```
    After successful execution, a file named `fold_X_test.csv` will be generated in the root directory.
-3. **AREDS Data Matching by ID**
-    The image loading is based on patient/image IDs. Please ensure you prepare the correct CSV file with IDs matching the image filenames(see `AMD_gen_52new.csv` & `patient_gen_52.csv`), I get the info using **get_id()** function in `data_id_age_cox.py`
+3. **Data Matching by ID**
+    The image loading is based on patient/image IDs. Please ensure you prepare the correct CSV file with IDs matching the image filenames, I get the info using **get_id()** function in `data_id_age_cox.py`
 
     Modify the Following Lines If Needed. To ensure correct image loading paths, you may need to adjust:
 
@@ -71,6 +72,7 @@ After generating all 5 folds of test results, run `cox_test.py` to evaluate each
   - `test_fold = 1` to `5`: evaluate individual folds
   - `test_fold = 0`: evaluate the **ensemble result** by combining predictions from all five folds
   - see our **biological age results** and **data spilt** for **AREDS** in `./result_v3`
+  - **Update**: The **biological age results** and **data spilt** for **AREDS2** are available in `./Areds2_results`. 
 
 ```python
 # Example (cox_test.py, line 280)
@@ -85,5 +87,5 @@ test_fold = 0  # use 0 for ensemble prediction
    python cox_doc.py
    ```
 - Replace **biological age** with **chronological age**:
-   - set `bio = False` in `cox_test.py` line 305
+   - set `bio = False` in `cox_test.py`/ `cox_doc.py` line 305
 
