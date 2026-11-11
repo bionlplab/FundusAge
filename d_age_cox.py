@@ -257,24 +257,14 @@ def train_model(dataloaders, model, criterion, optimizer, name='age_train', trai
             # Iterate over data.
             t = tqdm(enumerate(dataloaders[phase]),  desc='Loss: **** ', total=len(dataloaders[phase]), bar_format='{desc}{bar}{r_bar}')
             for batch_idx, (inputs, labels, event, group, ages, IDs) in t:
-                # if batch_idx == 0:
-                #     continue
-                # print(torch.isnan(inputs).sum())
+
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 event = event.to(device)
                 ages = ages.to(device)
                 mask = (labels == 12.0)
-
-                #print(inputs.shape, labels.shape)
-                # print('the lables is',torch.unique(labels))
-               
-                # print(len(torch.unique(labels)))
-                # zero the parameter gradients
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     if (phase =='train'):
                         outputs = model(inputs)
@@ -287,20 +277,12 @@ def train_model(dataloaders, model, criterion, optimizer, name='age_train', trai
                     L1_loss = masked_loss.sum() / ( mask.float().sum() + 1e-8)
 
                     cox_loss = cox_criterion(cox_age, labels[:,0], event)
-
                     loss = 2 * cox_loss + L1_loss
-                    #loss = cox_loss
-                    #print(cox_loss,L1_loss)
                     
                     gt = torch.cat((gt, ages), 0)
                     pred = torch.cat((pred, outputs.data), 0)
                     groups += group
 
-                    # print('outputs shape',outputs.shape)
-                    # print('labels shape', labels.shape)
-                    # print('groups shape', group.shape)
-                    #loss = criterion(outputs, ages)
-                    #print('barrier 1')
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
@@ -320,7 +302,7 @@ def train_model(dataloaders, model, criterion, optimizer, name='age_train', trai
                 c_index = get_val_CIndex(train_loader,val_loader,model)
                 if best_c_index < c_index:
                     best_c_index = c_index
-                    torch.save(model.state_dict(), os.path.join('/prj0129/hed4006/eye/VMamba/result_p' , name + '_fold_' + str(train_fold) + '.pth'))
+                    torch.save(model.state_dict(), os.path.join('/your_weight_path' , name + '_fold_' + str(train_fold) + '.pth'))
                 fopen.write('\nEpoch {} \t [{}] : \t {C_index:.3f}\n'.format(epoch, phase, C_index=c_index))
                 fopen.write('{} \t {}\n'.format(CLASS_NAMES, AUCs))
                 fopen.write('-' * 100)
@@ -363,18 +345,6 @@ def test_model(test_loader, model, name='empty',train_fold = 1):
             ID.append(IDs)
             groups += group
     AUCs = compute_L1(gt, pred)
-    '''
-    AUC, A00, A11, A0a, A1a, Aa0, Aa1, group_num = group_auc(gt, pred, groups)
-    print('AUCs',AUCs)
-    print('AUC',AUC)
-    print('A00',A00)
-    print('A11',A11)
-    print('A0a',A0a)
-    print('A1a',A1a)
-    print('Aa0',Aa0)
-    print('Aa1',Aa1)
-    print('Group Num',group_num)
-    '''
     pred1 = pred.cpu()
     pred2 = pred1.numpy()
     gt1 = gt.cpu()
@@ -543,14 +513,14 @@ if __name__ == '__main__':
     parser.add_argument("--pretrain_path", type=str, default='./pretrain')
     parser.add_argument("--arch", type=str, default='vmamba_small_s2l15')
 
-
+    parser.add_argument("--test", type=bool, action="store_true")
 
     args = parser.parse_args()
 
     fold = args.fold
     train_fold = args.train_fold
     total_num_fold = 5
-    
+    test_only = args.test
     train_sampler = None
     batch_size =96
     workers = 0
@@ -571,28 +541,23 @@ if __name__ == '__main__':
     label_path1 = os.path.join(path,'patient_gen_52.csv')
     tmp = np.loadtxt(label_path1, dtype=str, delimiter=",")
     tmp = tmp[1:] 
-    #because the patient (id: 54262 does not has age information, we should not use this patient
-#     tmp = np.delete(tmp,2985, axis = 0)
 
     train_name, validation_name, test_name = get_train_test_p_id(tmp, fold, train_fold, total_num_fold)
     
-    #train_path, train_labels, train_groups, train_ages = get_id(data_path,label_path,data_id = train_name, train = True)
-    #val_path, val_labels, val_groups, val_ages = get_id(data_path,label_path,data_id = validation_name, train = True)
+    train_path, train_labels, train_groups, train_ages = get_id(data_path,label_path,data_id = train_name, train = True)
+    val_path, val_labels, val_groups, val_ages = get_id(data_path,label_path,data_id = validation_name, train = True)
     test_path, test_labels, test_groups, test_ages = get_id(data_path,label_path,data_id = test_name, train = False)
     
-    #train_labels = np.asarray(train_labels, dtype=int)
-    #train_groups = np.asarray(train_groups, dtype=int)
+    train_labels = train_labels.astype(int)
+    val_labels = val_labels.astype(int)
+    test_labels = test_labels.astype(int)
     
-#     train_labels = train_labels.astype(int)
-#     val_labels = val_labels.astype(int)
-#     test_labels = test_labels.astype(int)
-    
-#     train_groups = train_groups.astype(int)
-#     val_groups = val_groups.astype(int)
-#     test_groups = test_groups.astype(int)
+    train_groups = train_groups.astype(int)
+    val_groups = val_groups.astype(int)
+    test_groups = test_groups.astype(int)
 
-    #print('the len of training group 0 is',len(np.argwhere(train_groups==0)))
-    #print('the len of training group 1 is',len(np.argwhere(train_groups==1)))
+    print('the len of training group 0 is',len(np.argwhere(train_groups==0)))
+    print('the len of training group 1 is',len(np.argwhere(train_groups==1)))
 
     data_transforms = {
         'train': transforms.Compose([
@@ -617,23 +582,22 @@ if __name__ == '__main__':
         ]),
     }
     
-    #train_dataset = Dataset(train_path,train_labels,groups=train_groups,ages= train_ages, transform = data_transforms["train"])
-    #val_dataset = Dataset(val_path,val_labels,groups=val_groups, ages=val_ages, transform = data_transforms["val"])
+    train_dataset = Dataset(train_path,train_labels,groups=train_groups,ages= train_ages, transform = data_transforms["train"])
+    val_dataset = Dataset(val_path,val_labels,groups=val_groups, ages=val_ages, transform = data_transforms["val"])
     test_dataset = Dataset(test_path,test_labels,groups=test_groups, ages=test_ages, transform = data_transforms["val"])
     
-    '''
+    
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=(train_sampler is None), 
                                            num_workers=workers, pin_memory=True, sampler=train_sampler)
         
-    # train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, 
-    #                                        num_workers=workers, pin_memory=True, sampler=train_sampler)
+
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=(train_sampler is None), 
                                            num_workers=workers, pin_memory=True, sampler=train_sampler)
-    '''
+    
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, 
                                            num_workers=workers, pin_memory=True, sampler=train_sampler)
 
-    #dataloaders = {"train": train_loader, "val": val_loader}
+    dataloaders = {"train": train_loader, "val": val_loader}
 
     #model_ft = vmamba_tiny_s1l8()
     name = args.arch
@@ -643,69 +607,22 @@ if __name__ == '__main__':
     if (name =='vmamba_tiny_s1l8'):
         model_ft = vmamba_tiny_s1l8(num_classes=1000)
         num_ftrs = model_ft.num_features
-    
-    #print(model_ft)
+
+    # imagenet pretrain weight
     pretrain_path = os.path.join(args.pretrain_path,name +'.pth')
-    #pretrain_path = "/prj0129/puw4002/AMD/pretrain_weight/pre.pth"
-    #model_ft.classifier = nn.Identity()
     load_pretrained_weights(model_ft, pretrain_path)
     
     print(num_ftrs)
     model_ft.classifier.head = nn.Linear(num_ftrs, 1)
-    #print(model_ft)
-
-
-    #model_ft = NewNetwork(num_classes=2)
     model_ft = model_ft.to(device)  # Move model to GPU
-    #print(model_ft)
-    #model_ft = torch.nn.DataParallel(model_ft) 
-
-
-    # model_ft = model_ft.to(device)        # 先 to(device)
-    # model_ft = torch.nn.DataParallel(model_ft)  # 然后再 DataParallel
-
-    '''
-    model_ft = models.inception_v3(pretrained=True)
-    num_ftrs = model_ft.fc.in_features
-    model_ft.fc = nn.Sequential(
-                nn.Linear(num_ftrs, N_CLASSES),
-                nn.Sigmoid()
-            )
-    '''
-    # model_ft = models.densenet201(pretrained=True)
-    # num_ftrs = model_ft.classifier.in_features
-    # model_ft.classifier = nn.Sequential(
-    #             nn.Linear(num_ftrs, N_CLASSES),
-    #             nn.Sigmoid()
-    #         )
-    # model_ft.classifier = nn.Linear(num_ftrs, N_CLASSES)
-    #model_ft = model_ft.to(device)
-    
-    # model_ft = torch.nn.DataParallel(model_ft)  # 然后再 DataParallel
-
     
     criterion = nn.L1Loss(reduction='none')
     
     optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.0001)
-    
-    # optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.0001, momentum=0.9)
-    
-    # Decay LR by a factor of 0.1 every 7 epochs
-    # exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_ft, 'min', patience=2, eps=1e-08, verbose=True)
 
-    # model_ft = train_model(dataloaders, model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-    #                        num_epochs=20)
-    
-    #model_ft = train_model(dataloaders, model_ft, criterion, optimizer_ft, name, train_fold, num_epochs=100)
-    
-    # model_ft.load_state_dict(torch.load(os.path.join(path_r, name+'_fold_'+str(train_fold)+'.pth')))
+    #exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_ft, 'min', patience=2, eps=1e-08, verbose=True)
+    if (test_only==False):
+          model_ft = train_model(dataloaders, model_ft, criterion, optimizer_ft, name, train_fold, num_epochs=100)
     model_ft.load_state_dict(torch.load(os.path.join(path_r, name+'_fold_'+str(train_fold)+'.pth')))
-    #model_ft.load_state_dict(torch.load(os.path.join(path_r, name+'.pth')))
-
-
-    #model_ft.load_state_dict(torch.load("/prj0129/hed4006/eye/VMamba/result_p/age_cox_train_2.pth"))
     test_model(test_loader,model_ft,'test',train_fold)
-    #test_model(val_loader,model_ft,'val',train_fold)
-    #test_model(train_loader,model_ft,'train',train_fold)
-    #c_index = get_val_CIndex(train_loader,test_loader,model_ft)
-    #print('{} : \t {C_index:.3f}'.format('test', C_index=c_index))
+

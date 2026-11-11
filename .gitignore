@@ -9,3 +9,5 @@ __pycache__/
 result_p/
 checkpoints/
 *.pth
+
+.DS_Store/

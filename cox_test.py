@@ -73,13 +73,6 @@ def cox(train_df, test_df, bio = True):
     train_df = train_df[mask]
     mask = (test_df[cols] < 8).all(axis=1)
     test_df = test_df[mask]
-    
-    #id_num,image_num = count_id(train_df)
-    #print(id_num,image_num)
-    #print(test_df['GEOAWI'].value_counts())
-    #print(test_df['RPEDWI'].value_counts())
-    #print(test_df['INCPWI'].value_counts())
-    #print(test_df['DRARWI'].value_counts())
 
     train_df['age_gap'] = train_df['bio_age'] - train_df['age']
     test_df['age_gap'] = test_df['bio_age'] - test_df['age']
@@ -94,11 +87,7 @@ def cox(train_df, test_df, bio = True):
         use_cols.append('bio_age')
     else:
         use_cols.append('age')
-    #use_cols.append('age')
-    #use_cols.append('age_gap')
-    #save_cols = ['id','times','status','age','bio_age','smk','DRSZWI','INCPWI','RPEDWI','GEOAWI','DRSOFT','DRARWI']
-    #save_train_df = train_df[save_cols]
-    #save_test_df = test_df[save_cols]
+
 
     significant_vars = [] 
     duration_col = "times"  
@@ -182,7 +171,7 @@ def cox(train_df, test_df, bio = True):
     
     train_df['risk'] = train_risk_scores
     test_df['risk'] = test_risk_scores
-    #test_df.to_csv('./cli/cox_test_gap.csv')
+
     y_train = Surv.from_dataframe("status", "times", train_df)
     y_test  = Surv.from_dataframe("status", "times", test_df)
 
@@ -194,14 +183,13 @@ def cox(train_df, test_df, bio = True):
 
     t_eval = 5            # in year
 
-    t_grid = np.arange(1 , 7, dtype=float)
+    t_grid = np.arange(2 , 8, dtype=float)
     
     aucs, mean_aucs = cumulative_dynamic_auc(
         y_train, y_test, risk_scores, t_grid
     )
     print(aucs)
-    #auc_5yr = aucs[0]
-    #print(f"AUC@5yr = {auc_5yr:.3f}")
+
 
     n_boot = 1000             # 
     rng    = np.random.default_rng(42)
@@ -254,12 +242,9 @@ def cox(train_df, test_df, bio = True):
         bs_base_A[i] = brier_score(
             y_train, y_b, pred_surv_at_t[idx], np.array([5])
         )[1][0]
-    #print(bs_base_A)
-    #np.save('./cli/gap_cindex_trans.npy',ci_boot)
-    #np.save('./cli/gap_brier_trans.npy',bs_base_A)
-    #np.save('./cli/bio_auc_trans.npy',auc_boot)
+
     bri_lower, bri_upper = np.percentile(bs_base_A, [2.5, 97.5])
-    #np.save('./doc/age_cindex.npy',ci_boot)
+
     print(f"Testing Brier Score = {bs_5yr:.3f} (95% CI: {bri_lower:.3f}–{bri_upper:.3f})")
    
     return ci_test2
@@ -267,7 +252,6 @@ def merge_cox(now_df):
 
     df1 = pd.read_csv('cox_gen_all.csv')
     a_indexed = df1.set_index('id')
-    #new = pd.read_csv('fold_3_trans_hashed.csv')
     b_indexed = now_df.set_index('id')
 
 
@@ -283,24 +267,13 @@ if __name__ == '__main__':
     if (test_fold==0):
         test_df = merge('./result_v3','test')
         train_df =  merge('./result_v3','all')
-
-        
+ 
     else:
         test_df = pd.read_csv(os.path.join('./result_v3','fold_'+str(test_fold)+'_test.csv'))
         train_df = pd.read_csv(os.path.join('./result_v3','fold_'+str(test_fold)+'_all.csv'))
-    #print(len(test_df))
-  
     
     hash_test_df = find_id(test_df,base=True)
     hash_train_df = find_id(train_df)
     
-    #hash_train_df.to_csv('./count/train.csv')
-    #hash_test_df.to_csv('./count/test.csv')
-    #id_num,image_num = count_id(hash_train_df)
-    #print(id_num,image_num)
-  
-   
-    #id_num,image_num = count_id(hash_train_df)
-    #print(id_num,image_num)
     val_cindex = cox(hash_train_df, hash_test_df, bio=True)
     

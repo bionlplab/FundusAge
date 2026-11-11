@@ -12,12 +12,12 @@ Here is the 5-fold cross validation results on AREDS Dataset with reading-center
 
 | Backbone | Fold   | Phenotypes | Demographic | Age (Loss)        | C‑Index |
 |----------|--------|------------|-------------|-------------------|---------|
-| VMamba   | fold‑1 | Yes        | smk         | Pred (MAE + CoxPH) | 0.878   |
-| VMamba   | fold‑2 | Yes        | smk         | Pred (MAE + CoxPH) | 0.869   |
-| VMamba   | fold‑3 | Yes        | smk         | Pred (MAE + CoxPH) | 0.883  |
-| VMamba   | fold‑4 | Yes        | smk         | Pred (MAE + CoxPH) | 0.886   |
-| VMamba   | fold‑5 | Yes        | smk         | Pred (MAE + CoxPH) | 0.882   |
-| VMamba   | all    | Yes        | smk         | Pred (MAE + CoxPH) | 0.888   |
+| VMamba   | fold‑1 | Yes        | smk         | FAA (MAE + CoxPH) | 0.878   |
+| VMamba   | fold‑2 | Yes        | smk         | FAA (MAE + CoxPH) | 0.869   |
+| VMamba   | fold‑3 | Yes        | smk         | FAA (MAE + CoxPH) | 0.883  |
+| VMamba   | fold‑4 | Yes        | smk         | FAA (MAE + CoxPH) | 0.886   |
+| VMamba   | fold‑5 | Yes        | smk         | FAA (MAE + CoxPH) | 0.882   |
+| VMamba   | all    | Yes        | smk         | FAA (MAE + CoxPH) | 0.888   |
 ###  Start 
 ![Model Architecture](./Picture1.png)
 ### Data Preparation
@@ -42,15 +42,27 @@ To generate biological age values:
    - The five-fold trained models can be accessed via the following Google Drive [link](https://drive.google.com/drive/folders/1TaPMHPWmvKCJrQ9MzgXxj4ukN1mqvd1b?usp=drive_link)：
    - Place all model checkpoints in the `./result_p` directory.
 
-2. **Run Prediction**  
-   Execute the following command to get predictions for each fold (X = 1–5):
-
+2. **Training and Prediction**  
+   Replace X with the fold number (1–5) in the commands below.
+   ***Inference with pretrained checkpoints***
+   To run inference directly using the pretrained FAA checkpoints, add `--test`:
    ```bash
-   python d_age_cox.py --train_fold X
+   python d_age_cox.py --train_fold X --test
    ```
    After successful execution, a file named `fold_X_test.csv` will be generated in the root directory.
+   ***Training with ImageNet pretrained weights***
+   To train the FAA model yourself, starting from ImageNet pretrained weights, run the command without `--test`:
+   ```bash
+   python d_age_cox.py --train_fold X 
+   ```
 3. **Data Matching by ID**
     The image loading is based on patient/image IDs. Please ensure you prepare the correct CSV file with IDs matching the image filenames, I get the info using **get_id()** function in `data_id_age_cox.py`
+
+    Due to dataset policies, we cannot provide the complete phenotype and demographic information. We provide the IDs and data splits used to build and evaluate the models. See `./data_split` for details:
+
+    - `train.csv` and `test.csv`: training and test splits for the model based on reading center phenotypes.
+
+    - `train_doc.csv` and `test_doc.csv`: training and test splits for the model based on specialist phenotypes.
 
     Modify the Following Lines If Needed. To ensure correct image loading paths, you may need to adjust:
 
@@ -60,32 +72,32 @@ To generate biological age values:
 
     For example, image loading is defined as:
     ```python
-    X = Image.open('/prj0129/mil4012/AREDS/AMD_224/' + ID[:-4] + '.jpg')
+    X = Image.open('/your_image_path/' + ID[:-4] + '.jpg')
     ```
     Make sure this path and file format match your local data setup.
 
-4. **Run Cox Evaluation on Predicted Results**
+4. **Build Cox Model and Evalate on Predicted Results**
 
-After generating all 5 folds of test results, run `cox_test.py` to evaluate each fold's Cox performance.
+   After generating all 5 folds of test results, run `cox_test.py` to evaluate each fold's Cox performance.
 
-- Use the `test_fold` variable at **line 280** of `cox_test.py` to specify which fold to evaluate:
-  - `test_fold = 1` to `5`: evaluate individual folds
-  - `test_fold = 0`: evaluate the **ensemble result** by combining predictions from all five folds
-  - see our **biological age results** and **data spilt** for **AREDS** in `./result_v3`
-  - **Update**: The **biological age results** and **data spilt** for **AREDS2** are available in `./Areds2_results`. 
+   - Use the `test_fold` variable at **line 280** of `cox_test.py` to specify which fold to evaluate:
+   - `test_fold = 1` to `5`: evaluate individual folds
+   - `test_fold = 0`: evaluate the **ensemble result** by combining predictions from all five folds
+   - see our **biological age results** and **data spilt** for **AREDS** in `./result_v3`
+   - **Update**: The **biological age results** and **data spilt** for **AREDS2** are available in `./Areds2_results`. 
 
-```python
-# Example (cox_test.py, line 280)
-test_fold = 0  # use 0 for ensemble prediction
-```
-- Building and test with Reading-center based Cox model:
-   ```python
-   python cox_test.py
-   ```
-- Building and test with Specialist based Cox model:
-   ```python
-   python cox_doc.py
-   ```
-- Replace **biological age** with **chronological age**:
-   - set `bio = False` in `cox_test.py`/ `cox_doc.py` line 305
+      ```python
+      # Example (cox_test.py, line 280)
+      test_fold = 0  # use 0 for ensemble prediction
+      ```
+   - Building and test with Reading-center based Cox model:
+      ```python
+      python cox_test.py
+      ```
+   - Building and test with Specialist based Cox model:
+      ```python
+      python cox_doc.py
+      ```
+   - Replace **biological age** with **chronological age**:
+      - set `bio = False` in `cox_test.py`/ `cox_doc.py` line 305
 
